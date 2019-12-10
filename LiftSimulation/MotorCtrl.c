@@ -6,6 +6,7 @@
  */ 
 
 #include "AppIncludes.h"
+#include "LiftLibrary.h"
 
 
 
@@ -57,12 +58,27 @@ void MotorCtrl_Stopped(Message* msg)
 }
 
 
+void MotorCtrl_AwaitOpen(Message* msg)
+{
+	
+	Usart_PutChar(msg->Id);
+	SetDoorState(DoorClosed, _motorCtrl.target);
+	SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
+}
+
+
 void MotorCtrl_Moving(Message* msg)
 {
+	Usart_PutChar(msg->Id);
+	// ist angekommen
 	if( msg->Id == Message_PosChanged && msg->MsgParamLow == msg->MsgParamHigh)
 	{
 		_motorCtrl.target = (FloorType)msg->MsgParamLow/POS_STEPS_PER_FLOOR;
-		SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
+		SetState(&_motorCtrl.fsm, MotorCtrl_AwaitOpen);
+		SetDoorState(DoorOpen, _motorCtrl.target);
+		
 	}	
 }
+
+
 
