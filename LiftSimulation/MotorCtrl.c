@@ -9,7 +9,6 @@
 #include "LiftLibrary.h"
 
 
-
 MotorController _motorCtrl =
 {
 	.start = Floor2,
@@ -60,11 +59,10 @@ void MotorCtrl_Stopped(Message* msg)
 
 void MotorCtrl_AwaitOpen(Message* msg)
 {
-	
-	Usart_PutChar(msg->Id);
 	SetDoorState(DoorClosed, _motorCtrl.target);
 	SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
 }
+
 
 
 void MotorCtrl_Moving(Message* msg)

@@ -36,6 +36,12 @@ void MotorCtrl_Initializing(Message* msg);
 void MotorCtrl_Stopped(Message* msg);
 void MotorCtrl_Moving(Message* msg);
 
+/**
+ * @brief Zustände vom Buttoncontroller
+ */
+void ButtonCtrl_Initializing(Message* msg);
+void ButtonCtrl_Click(Message* msg);
+
 /** 
 * @brief Struktur für den Motor-Controller
 */
@@ -47,6 +53,10 @@ typedef struct MotorController_tag
 	FloorType target;		//< ziel etage
 } MotorController;
 
+typedef struct ButtonController_tag
+{
+	Fsm fsm;				//< Zustandsmaschine
+} ButtonController;
 
 /** 
 * @brief Ein einziger Zustand für den TestController
@@ -66,6 +76,8 @@ typedef struct TestController_tag
 }TestController;
 
 extern MotorController _motorCtrl;
+
+extern ButtonController _buttonCtrl;
 
 
 #endif /* APPINCLUDES_H_ */
