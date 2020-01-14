@@ -1,12 +1,12 @@
 /*
- * SysCtrl.c
- *
- * Created: 03.01.2020 09:38:45
- * Author: Rolf Laich
- * 
- * Template für die Liftsteuerungs-Zustandsmaschine
- * für die Behandlung der Buttons usw
- */ 
+* SysCtrl.c
+*
+* Created: 03.01.2020 09:38:45
+* Author: Rolf Laich
+*
+* Template für die Liftsteuerungs-Zustandsmaschine
+* für die Behandlung der Buttons usw
+*/
 
 #include "AppIncludes.h"
 
@@ -40,7 +40,7 @@ MainCtrl _mainCtrl = {
 	.timer = 0,
 	.pendingRequests = 0,
 	.fsm = {.Next = 0, .RxMask = 0xFF, .CurrentState = MainCtrl_Initializing},
-		
+	
 };
 
 void MainCtrl_Initializing(Message* msg)
@@ -50,12 +50,12 @@ void MainCtrl_Initializing(Message* msg)
 		_mainCtrl.currentFloor = Floor0;
 		return;
 	}
-	if( msg->Id == Message_ElevatorReady)
+	else if( msg->Id == Message_ElevatorReady)
 	{
 		EnableStatusUpdate = true;
 		SetState(&_mainCtrl.fsm, MainCtrl_AwaitElevatorRequest);
 		return;
-	}	
+	}
 }
 
 void MainCtrl_AwaitElevatorRequest(Message* msg)
@@ -69,14 +69,14 @@ void MainCtrl_AwaitElevatorRequest(Message* msg)
 		{
 			FloorType reservation = GetFloorReservation(msg->MsgParamLow);
 			if( reservation != _mainCtrl.currentFloor )
-			{			
+			{
 				_mainCtrl.nextFloor = reservation;
 				SendEvent(SignalSourceApp, Message_MoveTo, _mainCtrl.nextFloor, 0);
 			}
 			else if( reservation == _mainCtrl.currentFloor)
 			{
 				SetDoorState(DoorOpen, _mainCtrl.currentFloor);
-				_mainCtrl.timer = StartTimer(5000);
+				//_mainCtrl.timer = StartTimer(5000);
 			}
 		}
 	}
@@ -95,6 +95,7 @@ void MainCtrl_AwaitElevatorRequest(Message* msg)
 			_mainCtrl.timer = StartTimer(5000);
 		}
 	}
+	SetState(&_mainCtrl.fsm, MainCtrl_AwaitTargetSelection);
 }
 
 void MainCtrl_AwaitTargetSelection(Message* msg)
@@ -102,8 +103,46 @@ void MainCtrl_AwaitTargetSelection(Message* msg)
 	Usart_PutChar(0xB0);
 	Usart_PutChar(msg->Id);
 	
-	// TODO: was soll hier passieren
+	if( msg->Id == Message_ElevatorHasStartedToMove)
+	{
+		if (msg->MsgParamLow == true)
+		{
+			
+			SetState(&_mainCtrl.fsm, MainCtrl_ElevatorMoving);
+			}else {
+			SetState(&_mainCtrl.fsm, MainCtrl_AwaitElevatorRequest);
+			SetDoorState(DoorClosed, _mainCtrl.currentFloor);
+		}
+	}
 	
+	if( IS_BUTTON_PRESS( msg ) )
+	{
+		if( IS_TARGET_SELECTION(msg->MsgParamLow))
+		{
+			FloorType reservation = GetTargetSelection(msg->MsgParamLow);
+			if( reservation != _mainCtrl.currentFloor )
+			{
+				_mainCtrl.nextFloor = reservation;
+				SendEvent(SignalSourceApp, Message_MoveTo, _mainCtrl.nextFloor, 0);
+			}
+			else if( reservation == _mainCtrl.currentFloor)
+			{
+				SetDoorState(DoorOpen, _mainCtrl.currentFloor);
+				//_mainCtrl.timer = StartTimer(5000);
+			}
+		}
+	}
+	
+	if(msg->Id == Message_ElevatorHasStartedToMove){
+		if(msg->MsgParamLow){
+			//SetState(&_mainCtrl.fsm, MoveElevator);
+		}
+		else{
+			
+		}
+	}
+	
+	// TODO: was soll hier passieren
 }
 
 void MainCtrl_ElevatorMoving(Message* msg)
@@ -111,7 +150,16 @@ void MainCtrl_ElevatorMoving(Message* msg)
 	Usart_PutChar(0xC0);
 	Usart_PutChar(msg->Id);
 	
+	if( msg->Id == Message_ElevatorReady)
+	{
+		_mainCtrl.currentFloor = msg->MsgParamLow;
+	}
 	// TODO: was soll hier passieren
+	if (_mainCtrl.currentFloor == _mainCtrl.nextFloor)
+	{
+		SetState(&_mainCtrl.fsm, MainCtrl_AwaitTargetSelection);
+		_mainCtrl.timer = StartTimer(5000);
+	}
 }
 
 

@@ -63,20 +63,39 @@ void MotorCtrl_Stopped(Message* msg)
 
 void MotorCtrl_AwaitOpen(Message* msg)
 {
-	SetDoorState(DoorClosed, _motorCtrl.target);
-	SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
+	Usart_PutChar(0x70);
+	Usart_PutChar(msg->Id);
+	if( msg->Id == LiftDoorEvent && msg->MsgParamLow == DoorOpen)
+	{
+		_motorCtrl.start = msg->MsgParamHigh;
+		SendEvent(SignalSourceApp, Message_ElevatorReady, _motorCtrl.start, 0);
+				
+		SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
+			
+	}
+	//SendEvent(SignalSourceElevator, Message_ElevatorHasStartedToMove, false, 0);
 }
 
 void MotorCtrl_AwaitClosed(Message* msg)
 {
+		Usart_PutChar(0x60);
+		Usart_PutChar(msg->Id);
 	if(msg->Id == LiftDoorEvent && msg->MsgParamLow == DoorClosed)
 	{
-		if(_motorCtrl.start != _motorCtrl.target )
+		if(_motorCtrl.start == _motorCtrl.target )
 		{
+			SetState(&_motorCtrl.fsm, MotorCtrl_Stopped);
+			//SendEvent(SignalSourceElevator, Message_ElevatorHasStartedToMove, true, 0);
+			SendEvent(SignalSourceElevator, Message_ElevatorHasStartedToMove, 0, 0);
+		}
+		else{
+			
 			SetState(&_motorCtrl.fsm, MotorCtrl_Moving);
 			MoveElevator(_motorCtrl.target * POS_STEPS_PER_FLOOR, OnElevatorPositionChanged );
+			SendEvent(SignalSourceElevator, Message_ElevatorHasStartedToMove, true, 0);
 		}
 	}
+	
 }
 	
 
@@ -84,6 +103,7 @@ void MotorCtrl_Moving(Message* msg)
 {
 	Usart_PutChar(msg->Id);
 	// ist angekommen
+	SetDisplay(msg->MsgParamLow/POS_STEPS_PER_FLOOR);
 	if( msg->Id == Message_PosChanged && msg->MsgParamLow == msg->MsgParamHigh)
 	{
 		
